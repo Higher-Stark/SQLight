@@ -47,6 +47,7 @@ artifacts/
 *_i.c
 *_p.c
 *_i.h
+*.filters
 *.ilk
 *.meta
 *.obj
@@ -62,6 +63,7 @@ artifacts/
 *.tmp
 *.tmp_proj
 *.log
+*.vcxproj
 *.vspscc
 *.vssscc
 .builds
