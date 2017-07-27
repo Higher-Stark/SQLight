@@ -21,11 +21,11 @@ private:
 	// ---------------------------------------
 	bptNode* bm();
 
-	bptNode* borrow_left(bptNode* &left);
-	bptNode* merge_left(bptNode* & left);
+	bptNode* borrow_left(bptNode* &left, const size_t& parent_pos);
+	bptNode* merge_left(bptNode* & left, const size_t& parent_pos);
 	
-	bptNode* borrow_right(bptNode* &right);
-	bptNode* merge_right(bptNode* & right);
+	bptNode* borrow_right(bptNode* &right, const size_t& parent_pos);
+	bptNode* merge_right(bptNode* & right, const size_t& parent_pos);
 	// ---------------------------------------
 	size_t find_pos(const std::string&);
 	size_t find_pos(const std::string&)const;
@@ -49,6 +49,7 @@ public:
 
 	bool find(const std::string& key) const;
 	// can be modified
+	// return  > value <
 	std::string& search(const std::string& key);
 
 	bptNode* insert(const std::string& key, const std::string& value);
