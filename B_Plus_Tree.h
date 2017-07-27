@@ -4,8 +4,13 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 #include <stdexcept>
 #include <utility>
+#include <cassert>
+
+typedef std::string Value;
+typedef std::string Key;
 
 class bptNode
 {
@@ -30,7 +35,7 @@ private:
 	size_t find_pos(const std::string&);
 	size_t find_pos(const std::string&)const;
 
-	void del(const size_t& pos);
+	void remove(const size_t& pos);
 
 public:
 	bptNode(const bool& isleaf = true, bptNode* p = nullptr,const int& size = 3);
@@ -42,19 +47,27 @@ public:
 	void set_parent(bptNode* p);
 	void set_max_size(const int &);
 
-	std::string leftest();
+	Key leftest();
 
 	//std::string predecessor(const std::string&);
-	std::string successor(const std::string&);
+	Key successor(const Key&);
 
-	bool find(const std::string& key) const;
+	bool find(const Key& key) const;
 	// can be modified
 	// return  > value <
-	std::string& search(const std::string& key);
+	Value& search(const Key& key);
 
-	bptNode* insert(const std::string& key, const std::string& value);
+	bptNode* insert(const Key& key, const Value& value);
 
-	bptNode* del(const std::string& key);
+	bptNode* del(const Key& key);
+
+	bool empty();
+
+	bptNode* only_child();
+
+	std::string traverse();
+
+	friend bptNode* inherit(bptNode* &_root);
 };
 
 #endif

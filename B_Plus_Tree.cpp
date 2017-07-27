@@ -4,7 +4,7 @@ using namespace std;
 
 bptNode* bptNode::split()
 {
-	bptNode* pa = new bptNode(false, maxSize);
+	bptNode* pa = new bptNode(false, nullptr, maxSize);
 	bptNode *lhc = new bptNode(isLeaf, pa, maxSize), *rhc = new bptNode(isLeaf, pa, maxSize);
 	//   > split leaf node
 	if (isLeaf) {
@@ -12,11 +12,11 @@ bptNode* bptNode::split()
 			//   > do NOT move key, for future comparing
 			lhc->keys.push_back(keys[i]);
 			//   > move or not move, either is OK
-			lhc->values.push_back(std::move(values[i]));
+			lhc->values.push_back(values[i]);
 		}
 		for (size_t i = keys.size() / 2; i != keys.size(); ++i) {
 			rhc->keys.push_back(keys[i]);
-			rhc->values.push_back(std::move(values[i]));
+			rhc->values.push_back(values[i]);
 		}
 
 		if (parent != nullptr) {
@@ -46,22 +46,21 @@ bptNode* bptNode::split()
 			lhc->keys.push_back(keys[i]);
 			//   > move pointer
 			//   > keep memory from freed
-			//   > reset hanging pointer to nullptr
-			lhc->children.push_back(std::move(children[i]));
+			lhc->children.push_back(children[i]);
 			children[i] = nullptr;
 			lhc->children[i]->set_parent(lhc);
 		}
-		lhc->children.push_back(std::move(children[keys.size() / 2]));
+		lhc->children.push_back(children[keys.size() / 2]);
 		children[keys.size() / 2] = nullptr;
 		lhc->children[keys.size() / 2]->set_parent(lhc);
 
 		for (size_t i = keys.size() / 2 + 1; i != keys.size(); i++) {
 			rhc->keys.push_back(keys[i]);
-			rhc->children.push_back(std::move(children[i]));
+			rhc->children.push_back(children[i]);
 			children[i] = nullptr;
 			rhc->children[i - keys.size() / 2 - 1]->set_parent(rhc);
 		}
-		rhc->children.push_back(std::move(children[keys.size()]));
+		rhc->children.push_back(children[keys.size()]);
 		children[keys.size()] = nullptr;
 		rhc->children[keys.size() - keys.size() / 2 - 1]->set_parent(rhc);
 		
@@ -69,7 +68,9 @@ bptNode* bptNode::split()
 			string& tmp = keys[keys.size() / 2];
 			size_t parent_pos = parent->find_pos(tmp);
 			parent->keys.insert(parent->keys.begin() + parent_pos, tmp);
+			rhc->set_parent(parent);
 			parent->children[parent_pos] = rhc;
+			lhc->set_parent(parent);
 			parent->children.insert(parent->children.begin() + parent_pos, lhc);
 			delete pa;
 			return parent;
@@ -90,13 +91,14 @@ bptNode* bptNode::bm()
 	while (parent_pos != parent->children.size() && parent->children[parent_pos] != this) {
 		parent_pos++;
 	}
+
 	if (parent_pos == 0) {
 		bptNode* &right = parent->children[parent_pos + 1];
 		if (right->keys.size() > maxSize / 2) {
 			return borrow_right(right, parent_pos);
 		}
 		else 
-			return merge_right(parent->children[parent_pos + 1], parent_pos);
+			return merge_right(right, parent_pos);
 	}
 	else if (parent_pos == parent->children.size() - 1) {
 		bptNode* &left = parent->children[parent_pos - 1];
@@ -104,13 +106,13 @@ bptNode* bptNode::bm()
 			return borrow_left(left, parent_pos-1);
 		}
 		else
-			return merge_left(parent->children[parent_pos - 1], parent_pos - 1);
+			return merge_left(left, parent_pos - 1);
 	}
 	else {
 		bptNode* &left = parent->children[parent_pos - 1];
 		bptNode* &right = parent->children[parent_pos + 1];
 		if (left->keys.size() > right->keys.size()) {
-			if (left->keys.size() > maxSize ) {
+			if (left->keys.size() > maxSize / 2) {
 				return borrow_left(left, parent_pos - 1);
 			}
 			else
@@ -199,7 +201,7 @@ bptNode* bptNode::merge_left(bptNode* &left, const size_t& parent_pos)
 			//   -> move
 			//   -> reset pointer to nullptr
 			left->children[i]->set_parent(this);
-			newchildren.push_back(std::move(left->children[i]));
+			newchildren.push_back(left->children[i]);
 			left->children[i] = nullptr;
 		}
 		left->children[left->keys.size()]->set_parent(this);
@@ -218,12 +220,14 @@ bptNode* bptNode::merge_left(bptNode* &left, const size_t& parent_pos)
 		//   > append pre-existed key and children to the new vec
 		for (size_t i = 0; i != keys.size(); ++i) {
 			newkeys.push_back(keys[i]);
-			newchildren.push_back(std::move(children[i]));
+			newchildren.push_back(children[i]);
+			children[i] = nullptr;
 		}
-		newchildren.push_back(std::move(children[keys.size()]));
+		newchildren.push_back(children[keys.size()]);
+		children[keys.size()] = nullptr;
 
 		//   > replace
-		keys = std::move(keys);
+		keys = std::move(newkeys);
 		children = std::move(newchildren);
 		return this;
 	}
@@ -241,6 +245,7 @@ bptNode* bptNode::borrow_right(bptNode* &right, const size_t& parent_pos)
 		right->keys.erase(right->keys.begin());
 		right->values.erase(right->values.begin());
 		parent->keys[parent_pos] = right->keys[0];
+		return this;
 	}
 	else {
 		keys.push_back(parent->keys[parent_pos]);
@@ -250,6 +255,7 @@ bptNode* bptNode::borrow_right(bptNode* &right, const size_t& parent_pos)
 		right->children.erase(right->children.begin());
 		parent->keys[parent_pos] = right->keys[0];
 		right->keys.erase(right->keys.begin());
+		return this;
 	}
 }
 
@@ -294,7 +300,7 @@ bptNode* bptNode::merge_right(bptNode* &right, const size_t& parent_pos)
 size_t bptNode::find_pos(const string& key)
 {
 	size_t i = 0;
-	while (i != keys.size() && key > keys[i]) {
+	while (i != keys.size() && key >= keys[i]) {
 		++i;
 	}
 	return i;
@@ -310,21 +316,21 @@ size_t bptNode::find_pos(const string& key)const
 }
 
 //   > private method
-void bptNode::del(const size_t& pos)
+void bptNode::remove(const size_t& pos)
 {
 	if (!isLeaf) throw runtime_error("this is a nonleaf node. Action refused");
 	keys.erase(keys.begin() + pos);
 	values.erase(values.begin() + pos);
 }
 
-bptNode::bptNode(const bool& isleaf = true, bptNode* p = nullptr, const int& size = 3) 
+bptNode::bptNode(const bool& isleaf, bptNode* p, const int& size) 
 	: isLeaf(isleaf), parent(p), maxSize(size)
 {
 	if (maxSize < 3) 
 		throw runtime_error("B+Tree max size too small");
 }
 
-bptNode::bptNode(const bool& isleaf = true, const int& size = 3)
+bptNode::bptNode(const bool& isleaf, const int& size)
 	: isLeaf(isleaf), parent(nullptr), maxSize(size)
 {
 	if (maxSize < 3)
@@ -368,8 +374,7 @@ void bptNode::set_max_size(const int& size)
 		throw runtime_error("B+Tree max size too small");
 	maxSize = size;
 }
-
-string bptNode::leftest()
+Key bptNode::leftest()
 {
 	if (isLeaf) {
 		if (values.empty()) return "";
@@ -380,7 +385,7 @@ string bptNode::leftest()
 	}
 }
 
-string bptNode::successor(const string& curr)
+Key bptNode::successor(const Key& curr)
 {
 	if (isLeaf) {
 		vector<string>::iterator it = keys.begin();
@@ -404,7 +409,7 @@ string bptNode::successor(const string& curr)
 			while (pos == up->keys.size()) {
 				curr = up;
 				up = up->parent;
-				if (parent == nullptr) return "";
+				if (up == nullptr) return "";
 				pos = 0;
 				for (; pos != up->children.size(); ++pos) {
 					if (up->children[pos] == curr) break;
@@ -426,10 +431,10 @@ string bptNode::successor(const string& curr)
 	}
 }
 
-bool bptNode::find(const std::string& key) const
+bool bptNode::find(const Key& key) const
 {
 	if (isLeaf) {
-		for (vector<string>::const_iterator it = keys.cbegin(); it != keys.cend(); ++it) {
+		for (vector<Key>::const_iterator it = keys.cbegin(); it != keys.cend(); ++it) {
 			if (*it == key) return true;
 		}
 		return false;
@@ -440,7 +445,7 @@ bool bptNode::find(const std::string& key) const
 	}
 }
 
-string& bptNode::search(const string& key)
+Value& bptNode::search(const Key& key)
 {
 	if (isLeaf) {
 		for (size_t i = 0; i != keys.size(); i++) {
@@ -454,13 +459,13 @@ string& bptNode::search(const string& key)
 	}
 }
 
-bptNode* bptNode::insert(const string& key, const string& value)
+bptNode* bptNode::insert(const Key& key, const Value& value)
 {
 	if (isLeaf) {
 		size_t pos = find_pos(key);
 		keys.insert(keys.begin() + pos, key);
 		values.insert(values.begin() + pos, value);
-		if (keys.size >= maxSize) {
+		if (keys.size() >= maxSize) {
 			bptNode* ret = split();
 			delete this;
 			return ret;
@@ -470,7 +475,7 @@ bptNode* bptNode::insert(const string& key, const string& value)
 	else {
 		size_t pos = find_pos(key);
 		children[pos]->insert(key, value);
-		if (keys.size >= maxSize) {
+		if (keys.size() >= maxSize) {
 			bptNode* ret = split();
 			delete this;
 			return ret;
@@ -479,19 +484,20 @@ bptNode* bptNode::insert(const string& key, const string& value)
 	}
 }
 
-bptNode* bptNode::del(const string& key)
+bptNode* bptNode::del(const Key& key)
 {
 	if (isLeaf) {
 		size_t pos = find_pos(key);
-		if (pos <= 0 || pos == keys.size())
-			throw runtime_error(key + " not found. Delete failed!");
+		if (pos <= 0 || pos > keys.size())
+			throw runtime_error("key doesn't exist. Delete refused");
 		pos--;
 		if (keys[pos] != key)
-			throw runtime_error(key + " not found. Delete failed!");
-		del(pos);
-		if (parent != nullptr && keys.size() < maxSize / 2) 
+			throw runtime_error("key doesn't exist. Delete refused");
+		remove(pos);
+		if (parent != nullptr && keys.size() < maxSize / 2) {
 			return bm();
-		return this;
+		}
+		else return this;
 	}
 	else {
 		size_t pos = find_pos(key);
@@ -500,9 +506,54 @@ bptNode* bptNode::del(const string& key)
 				keys[pos - 1] = successor(key);
 			}
 		}
-		bool ret = children[pos]->del(key);
-		if (parent != nullptr && keys.size() < maxSize / 2)
+		bptNode* ret = children[pos]->del(key);
+		if (parent != nullptr && keys.size() < maxSize / 2) {
 			return bm();
-		return this;
+		}
+		else return this;
 	}
+}
+
+bool bptNode::empty()
+{
+	return keys.empty();
+}
+
+bptNode* bptNode::only_child()
+{
+	return children[0];
+}
+
+string bptNode::traverse()
+{
+	if (isLeaf) {
+		ostringstream oss;
+		//oss << '|';
+		for (size_t i = 0; i != values.size(); ++i) {
+			oss << values[i] << "  ";
+		}
+		//oss << '|';
+		return oss.str();
+	}
+	else {
+		ostringstream oss; 
+		//oss << '|';
+		for (vector<bptNode*>::iterator it = children.begin(); it != children.end(); ++it) {
+			oss << (*it)->traverse() << "*";
+		}
+		//oss << '|';
+		return oss.str();
+	}
+}
+
+bptNode* inherit(bptNode* & _root)
+{
+	if (_root->empty()) {
+		_root->children[0]->set_parent(nullptr);
+		bptNode* ret = _root->children[0];
+		_root->children[0] = nullptr;
+		delete _root;
+		return ret;
+	}
+	else return _root;
 }
