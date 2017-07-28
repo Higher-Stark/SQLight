@@ -8,9 +8,11 @@
 #include <stdexcept>
 #include <utility>
 #include <cassert>
+#include <tuple>
 
 typedef std::string Value;
 typedef std::string Key;
+typedef std::tuple<Key, Value> KV;
 
 class bptNode
 {
@@ -48,9 +50,11 @@ public:
 	void set_max_size(const int &);
 
 	Key leftest();
+	KV leftest(const int&);
 
 	//std::string predecessor(const std::string&);
 	Key successor(const Key&);
+	KV successor(const Key&, const int&);
 
 	bool find(const Key& key) const;
 	// can be modified
@@ -58,6 +62,8 @@ public:
 	Value& search(const Key& key);
 
 	bptNode* insert(const Key& key, const Value& value);
+
+	//Value& find_replace(const Key& key);
 
 	bptNode* del(const Key& key);
 

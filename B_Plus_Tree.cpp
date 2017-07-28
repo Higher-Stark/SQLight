@@ -2,6 +2,8 @@
 
 using namespace std;
 
+/* -----------------------------   Private Method   ------------------------------ */
+
 bptNode* bptNode::split()
 {
 	bptNode* pa = new bptNode(false, nullptr, maxSize);
@@ -315,13 +317,14 @@ size_t bptNode::find_pos(const string& key)const
 	return i;
 }
 
-//   > private method
 void bptNode::remove(const size_t& pos)
 {
 	if (!isLeaf) throw runtime_error("this is a nonleaf node. Action refused");
 	keys.erase(keys.begin() + pos);
 	values.erase(values.begin() + pos);
 }
+
+/* -------------------   Public Method   ---------------------- */
 
 bptNode::bptNode(const bool& isleaf, bptNode* p, const int& size) 
 	: isLeaf(isleaf), parent(p), maxSize(size)
@@ -374,14 +377,26 @@ void bptNode::set_max_size(const int& size)
 		throw runtime_error("B+Tree max size too small");
 	maxSize = size;
 }
+
 Key bptNode::leftest()
 {
 	if (isLeaf) {
-		if (values.empty()) return "";
-		else return *values.begin();
+		if (keys.empty()) return "";
+		else return *keys.begin();
 	}
 	else {
 		return (*children.begin())->leftest();
+	}
+}
+
+KV bptNode::leftest(const int&)
+{
+	if (isLeaf) {
+		if (keys.empty()) return make_tuple("", "");
+		else return make_tuple(*keys.begin(), *values.begin());
+	}
+	else {
+		return (*children.begin())->leftest(1);
 	}
 }
 
@@ -431,6 +446,55 @@ Key bptNode::successor(const Key& curr)
 	}
 }
 
+KV bptNode::successor(const Key& curr, const int&)
+{
+	if (isLeaf) {
+		vector<string>::iterator it = keys.begin();
+		for (; it != keys.end(); ++it) {
+			if (*it == curr) break;
+		}
+		if (it == keys.end()) {
+			throw runtime_error(curr + " Not found.");
+		}
+		//   > curr is the last element in content
+		if (it + 1 == keys.end()) {
+			bptNode* curr = this;
+			bptNode* up = parent;
+			size_t pos = 0;
+			//   > if parent doesn't exist
+			if (up == nullptr) return make_tuple("", "");
+
+			for (; pos != up->children.size(); ++pos) {
+				if (up->children[pos] == curr) break;
+			}
+			while (pos == up->keys.size()) {
+				curr = up;
+				up = up->parent;
+				if (up == nullptr) return make_tuple("", "");
+				pos = 0;
+				for (; pos != up->children.size(); ++pos) {
+					if (up->children[pos] == curr) break;
+				}
+			}
+			//return up->keys[pos];
+			return make_tuple(up->keys[pos], search(up->keys[pos]));
+		}
+		//   > curr is not the last one
+		else {
+			//return *(it + 1);
+			return make_tuple(*(it + 1), search(*(it + 1)));
+		}
+	}
+	else {
+		size_t pos = 0;
+		for (; pos != keys.size(); ++pos) {
+			if (keys[pos] > curr) break;
+		}
+		return children[pos]->successor(curr, 1);
+	}
+}
+
+
 bool bptNode::find(const Key& key) const
 {
 	if (isLeaf) {
@@ -451,7 +515,7 @@ Value& bptNode::search(const Key& key)
 		for (size_t i = 0; i != keys.size(); i++) {
 			if (keys[i] == key) return values[i];
 		}
-		throw runtime_error(key + " not found");
+		throw runtime_error("Not find");
 	}
 	else {
 		size_t pos = find_pos(key);
